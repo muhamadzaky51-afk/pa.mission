@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Project Ambassador Mission Hub</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Config for Premium Theme -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        background: '#050505',
+                        surface: '#111111',
+                        surfaceHover: '#1A1A1A',
+                        primary: '#3B82F6',
+                        primaryGlow: 'rgba(59, 130, 246, 0.5)',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-panel {
+                @apply bg-surface/40 backdrop-blur-xl border border-white/10 shadow-2xl;
+            }
+            .glass-card {
+                @apply bg-white/5 backdrop-blur-md border border-white/5 shadow-lg transition-all duration-300;
+            }
+            .glass-card:hover {
+                @apply bg-white/10 border-white/20;
+            }
+            .text-gradient {
+                @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400;
+            }
+            .text-gradient-success {
+                @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-400;
+            }
+            .hide-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .hide-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        }
+
+        body {
+            background-color: #050505;
+            color: #ffffff;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Ambient Background Glows */
+        .ambient-glow-1 {
+            position: fixed;
+            top: -10%;
+            left: -10%;
+            width: 80vw;
+            height: 80vw;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .ambient-glow-2 {
+            position: fixed;
+            bottom: -10%;
+            right: -10%;
+            width: 90vw;
+            height: 90vw;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+    </style>
+
+    <!-- React, ReactDOM, Babel, Framer Motion, Confetti -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body class="antialiased selection:bg-primary/30">
+    <div class="ambient-glow-1"></div>
+    <div class="ambient-glow-2"></div>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useCallback, useRef } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        const Icons = {
+            Home: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+            Settings: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+            CheckCircle: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+            Lock: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+            Unlock: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>,
+            Clock: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            Trophy: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
+            Star: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+            ArrowRight: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+            ChevronRight: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="9 18 15 12 9 6"/></svg>,
+            Upload: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+            FileText: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>,
+            AlertCircle: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+            Play: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polygon points="5 3 19 12 5 21 5 3"/></svg>,
+            Calendar: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+            X: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+            Users: (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        };
+
+        const initialMissions = [
+            { 
+                id: 'm1', 
+                title: 'Mission 1', 
+                type: 'regular', 
+                openDate: '2026-07-13T00:00:00', 
+                closeDate: '2026-07-16T23:59:59', 
+                xp: 100, 
+                isAssigned: true, 
+                statusOverride: null, 
+                description: 'Langkah awal perjalanan Duta Anda. Pahami platform, kelola profil, dan pelajari sumber daya inti.' 
+            },
+            { 
+                id: 'm2', 
+                title: 'Mission 2', 
+                type: 'regular', 
+                openDate: '2026-07-20T00:00:00', 
+                closeDate: '2026-07-24T23:59:59', 
+                xp: 150, 
+                isAssigned: true, 
+                statusOverride: null, 
+                description: 'Selami nilai inti dari brand. Kirimkan ulasan reflektif dan pemikiran kepemimpinan Anda sebagai representasi duta utama.' 
+            },
+            { 
+                id: 'm3', 
+                title: 'Mission 3', 
+                type: 'regular', 
+                openDate: '2026-07-26T00:00:00', 
+                closeDate: '2026-07-31T23:59:59', 
+                xp: 200, 
+                isAssigned: true, 
+                statusOverride: null, 
+                description: 'Kolaborasi antar duta. Diskusikan perspektif rekan sebaya dan kirimkan ringkasan rencana aksi bersama.' 
+            },
+            { 
+                id: 'sa21', 
+                title: 'Special Assignment 2.1', 
+                type: 'special', 
+                openDate: '2026-08-01T00:00:00', 
+                closeDate: '2026-08-05T23:59:59', 
+                xp: 300, 
+                isAssigned: true, // Terpilih secara bawaan untuk demo
+                statusOverride: null, 
+                description: 'Tugas Tingkat Tinggi: Rumuskan strategi taktis promosi program komunitas. Khusus untuk 3 peserta terpilih.' 
+            },
+            { 
+                id: 'm4', 
+                title: 'Mission 4', 
+                type: 'regular', 
+                openDate: '2026-08-02T00:00:00', 
+                closeDate: '2026-08-09T23:59:59', 
+                xp: 250, 
+                isAssigned: true, 
+                statusOverride: null, 
+                description: 'Bedah sebuah kampanye pemasaran aktif. Kirimkan laporan terstruktur berisi analisis kekuatan dan aspek optimasinya.' 
+            },
+            { 
+                id: 'sa31', 
+                title: 'Special Assignment 3.1', 
+                type: 'special', 
+                openDate: '2026-08-10T00:00:00', 
+                closeDate: '2026-08-15T23:59:59', 
+                xp: 300, // Disamakan dengan SA 2.1
+                isAssigned: false, // Disembunyikan di awal, aktifkan di admin
+                statusOverride: null, 
+                description: 'Tugas Menengah: Mengembangkan rancangan pembuatan webinar interaktif mandiri. Terbuka hanya untuk peserta terpilih.' 
+            },
+            { 
+                id: 'sa41', 
+                title: 'Special Assignment 4.1', 
+                type: 'special', 
+                openDate: '2026-08-16T00:00:00', 
+                closeDate: '2026-08-22T23:59:59', 
+                xp: 300, // Disamakan dengan SA 2.1
+                isAssigned: false, // Disembunyikan di awal, aktifkan di admin
+                statusOverride: null, 
+                description: 'Tugas Elit: Menyusun taktik pengembangan komunitas regional yang berkelanjutan secara komprehensif.' 
+            },
+            { 
+                id: 'm5', 
+                title: 'Mission 5', 
+                type: 'regular', 
+                openDate: '2026-09-01T00:00:00', 
+                closeDate: '2026-09-17T23:59:59', 
+                xp: 300, 
+                isAssigned: true, 
+                statusOverride: null, 
+                description: 'Konsolidasikan seluruh kontribusi Anda. Rancang dan buat portofolio dampak digital Anda selama program berlangsung.' 
+            },
+            { 
+                id: 'm6', 
+                title: 'Mission 6 (Final)', 
+                type: 'regular', 
+                openDate: '2026-09-18T00:00:00', 
+                closeDate: '2026-09-25T23:59:59', 
+                xp: 1000, 
+                isAssigned: true, 
+                statusOverride: null, 
+                description: 'Puncak dari Program Duta. Kirimkan video refleksi perjalanan serta presentasi evaluasi akhir kinerja Anda.' 
+            },
+        ];
+
+        const playVictorySound = () => {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const audioCtx = new AudioContext();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); 
+                oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); 
+                oscillator.frequency.exponentialRampToValueAtTime(1108.73, audioCtx.currentTime + 0.3); 
+                
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.5);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 1.5);
+            } catch(e) { console.log("Audio API not supported."); }
+        };
+
+        const calculateStatus = (mission, currentTime) => {
+            if (mission.statusOverride) return mission.statusOverride; 
+            
+            const now = currentTime.getTime();
+            const open = new Date(mission.openDate).getTime();
+            const close = new Date(mission.closeDate).getTime();
+
+            if (now < open) return 'Coming Soon';
+            if (now >= open && now <= close) return 'Available';
+            if (now > close) return 'Mission Closed';
+            return 'Locked';
+        };
+
+        const getStatusConfig = (status) => {
+            const configs = {
+                'Coming Soon': { color: 'text-slate-400', bg: 'bg-slate-400/10', border: 'border-slate-800', icon: Icons.Clock },
+                'Available': { color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-500/50', icon: Icons.Unlock, glow: true },
+                'Submitted': { color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-500/50', icon: Icons.Upload },
+                'Waiting for Review': { color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-500/50', icon: Icons.Clock },
+                'Revision Required': { color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-500/50', icon: Icons.AlertCircle, glow: true },
+                'Approved': { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-500/50', icon: Icons.CheckCircle },
+                'Completed': { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-500/50', icon: Icons.CheckCircle },
+                'Mission Closed': { color: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-900/50', icon: Icons.Lock },
+                'Locked': { color: 'text-slate-500', bg: 'bg-slate-800/50', border: 'border-slate-800', icon: Icons.Lock },
+            };
+            return configs[status] || configs['Locked'];
+        };
+
+        const useCountdown = (targetDateStr, currentTime) => {
+            const target = new Date(targetDateStr).getTime();
+            const now = currentTime.getTime();
+            const diff = target - now;
+
+            if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true };
+
+            return {
+                days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+                seconds: Math.floor((diff % (1000 * 60)) / 1000),
+                isPast: false
+            };
+        };
+
+        const Badge = ({ children, className = "" }) => (
+            <span className={`px-2 md:px-2.5 py-0.5 rounded-full text-[10px] md:text-xs font-medium border ${className}`}>
+                {children}
+            </span>
+        );
+
+        const Button = ({ children, variant = 'primary', className = "", disabled, ...props }) => {
+            const baseStyle = "inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-h-[44px]";
+            const variants = {
+                primary: "bg-primary text-white hover:bg-blue-600 focus:ring-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] active:scale-95",
+                secondary: "bg-surfaceHover text-white hover:bg-white/10 border border-white/10 focus:ring-slate-500 active:scale-95",
+                success: "bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] active:scale-95",
+                danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 focus:ring-red-500 active:scale-95",
+            };
+            const sizes = {
+                sm: "px-3 py-1.5 text-xs md:text-sm min-h-[38px]",
+                md: "px-4 py-2.5 text-xs md:text-sm",
+                lg: "px-6 py-3.5 text-sm md:text-base",
+            };
+            return (
+                <button className={`${baseStyle} ${variants[variant]} ${sizes[props.size || 'md']} ${className}`} disabled={disabled} {...props}>
+                    {children}
+                </button>
+            );
+        };
+
+        const Card = ({ children, className = "", glowing = false, onClick }) => (
+            <div 
+                onClick={onClick}
+                className={`glass-card rounded-xl md:rounded-2xl p-4 md:p-6 ${glowing ? 'ring-1 ring-primary/50 shadow-[0_0_30px_rgba(59,130,246,0.15)]' : ''} ${className}`}
+            >
+                {children}
+            </div>
+        );
+
+        const StatCard = ({ title, value, icon: Icon, glowColor = "rgba(59,130,246,0.2)" }) => (
+            <div className="glass-card rounded-xl md:rounded-2xl p-4 md:p-6 relative overflow-hidden group">
+                <div className="absolute -right-6 -top-6 w-20 h-20 md:w-24 md:h-24 rounded-full blur-2xl transition-all duration-500 group-hover:scale-150" style={{ background: glowColor }}></div>
+                <div className="flex items-center justify-between relative z-10">
+                    <div>
+                        <p className="text-slate-400 text-xs md:text-sm font-medium mb-0.5 md:mb-1">{title}</p>
+                        <h3 className="text-2xl md:text-3xl font-display font-bold text-white">{value}</h3>
+                    </div>
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/70">
+                        <Icon size={20} className="md:size-[24px]" />
+                    </div>
+                </div>
+            </div>
+        );
+
+        const MissionCompleteScreen = ({ mission, onContinue, xpEarned }) => {
+            useEffect(() => {
+                playVictorySound();
+                const duration = 3 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+                const interval = setInterval(function() {
+                    const timeLeft = animationEnd - Date.now();
+                    if (timeLeft <= 0) return clearInterval(interval);
+                    const particleCount = 40 * (timeLeft / duration);
+                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } }));
+                }, 250);
+            }, []);
+
+            return (
+                <motion.div 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-xl p-4"
+                >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.15)_0%,transparent_50%)]"></div>
+                    <motion.div 
+                        initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", bounce: 0.4 }}
+                        className="glass-panel p-6 md:p-10 rounded-2xl md:rounded-3xl max-w-sm md:max-w-md w-full text-center relative overflow-hidden"
+                    >
+                        <motion.div 
+                            initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} transition={{ delay: 0.2, type: "spring" }}
+                            className="w-16 h-16 md:w-20 md:h-20 mx-auto bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/50 mb-4 md:mb-6 shadow-[0_0_40px_rgba(16,185,129,0.4)]"
+                        >
+                            <Icons.Trophy size={32} className="text-emerald-400 md:size-[40px]" />
+                        </motion.div>
+                        
+                        <h2 className="text-xl md:text-2xl font-display font-bold text-white mb-1.5 tracking-tight">MISSION COMPLETE</h2>
+                        <p className="text-xs md:text-sm text-slate-300 mb-4 md:mb-6">{mission.title} has been approved.</p>
+                        
+                        <div className="bg-surface/50 rounded-xl p-4 mb-6 border border-white/5">
+                            <p className="text-[10px] md:text-xs text-slate-400 mb-0.5">Reward Earned</p>
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+                                className="text-2xl md:text-3xl font-display font-bold text-gradient-success flex items-center justify-center gap-1.5"
+                            >
+                                <Icons.Star size={24} className="text-emerald-400 md:size-[28px]" />
+                                +{xpEarned} XP
+                            </motion.div>
+                        </div>
+                        
+                        <Button size="lg" className="w-full text-xs md:text-sm shadow-[0_0_20px_rgba(16,185,129,0.3)]" onClick={onContinue} style={{ backgroundColor: '#10B981' }}>
+                            Continue Journey <Icons.ArrowRight className="ml-1.5" size={16} />
+                        </Button>
+                    </motion.div>
+                </motion.div>
+            );
+        };
+
+        const Dashboard = ({ missions, currentTime, onOpenMission, userXp }) => {
+            const userLevel = Math.floor(userXp / 500) + 1;
+            const progress = (userXp % 500) / 500 * 100;
+
+            const visibleMissions = useMemo(() => {
+                return missions.filter(m => m.type === 'regular' || m.isAssigned === true);
+            }, [missions]);
+
+            const totalMissions = visibleMissions.length;
+            const completedMissions = visibleMissions.filter(m => ['Approved', 'Completed'].includes(calculateStatus(m, currentTime))).length;
+
+            return (
+                <div className="max-w-5xl mx-auto space-y-8 md:space-y-12 pb-24">
+                    {/* Hero Section */}
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 blur-3xl -z-10 rounded-2xl"></div>
+                        <div className="pt-4 md:pt-8 pb-2">
+                            <h1 className="text-2xl md:text-5xl font-display font-bold mb-3 tracking-tight leading-tight">
+                                Project Ambassador <br/><span className="text-gradient">Mission Hub</span>
+                            </h1>
+                            <p className="text-slate-400 text-xs md:text-base max-w-2xl leading-relaxed">
+                                Selesaikan misi khusus, unggah bukti otentik, klaim hadiah XP, dan tingkatkan peringkat duta Anda.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <StatCard title="Total XP" value={userXp} icon={Icons.Star} glowColor="rgba(245,158,11,0.15)" />
+                        <StatCard title="Peringkat" value={`Level ${userLevel}`} icon={Icons.Trophy} glowColor="rgba(139,92,246,0.15)" />
+                        <StatCard title="Misi Selesai" value={`${completedMissions}/${totalMissions}`} icon={Icons.CheckCircle} glowColor="rgba(16,185,129,0.15)" />
+                    </div>
+
+                    {/* XP Progress Bar */}
+                    <Card>
+                        <div className="flex justify-between text-xs font-medium mb-2.5">
+                            <span className="text-white">Level {userLevel} Progress</span>
+                            <span className="text-slate-400">{userXp % 500} / 500 XP ke Level {userLevel + 1}</span>
+                        </div>
+                        <div className="h-2.5 w-full bg-surfaceHover rounded-full overflow-hidden border border-white/5">
+                            <motion.div 
+                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                                transition={{ duration: 1, ease: "easeOut" }}
+                            />
+                        </div>
+                    </Card>
+
+                    {/* Mission Roadmap */}
+                    <div>
+                        <h2 className="text-lg md:text-2xl font-display font-bold mb-6 md:mb-8 flex items-center gap-2">
+                            <Icons.Play size={20} className="text-primary md:size-[24px]" /> Alur Misi & Timeline
+                        </h2>
+                        
+                        <div className="relative border-l-2 border-surfaceHover ml-3.5 md:ml-6 space-y-6 md:space-y-10">
+                            {visibleMissions.map((mission, idx) => {
+                                const status = calculateStatus(mission, currentTime);
+                                const config = getStatusConfig(status);
+                                const isAssigned = mission.isAssigned;
+                                
+                                return (
+                                    <motion.div 
+                                        key={mission.id}
+                                        initial={{ opacity: 0, x: -15 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.08 }}
+                                        className="relative pl-6 md:pl-10 group"
+                                    >
+                                        {/* Timeline Node Point */}
+                                        <div className={`absolute -left-[13px] md:-left-[15px] top-3 md:top-4 w-6 h-6 md:w-7 md:h-7 rounded-full border-4 border-background flex items-center justify-center transition-all duration-300 ${config.bg} ${config.color} ${config.glow ? 'shadow-[0_0_12px_currentColor]' : ''}`}>
+                                            <div className="w-1.5 h-1.5 rounded-full bg-current"></div>
+                                        </div>
+
+                                        <Card 
+                                            className={`transition-all duration-300 border ${config.border} hover:border-primary/50 group-hover:-translate-y-0.5`}
+                                            onClick={() => onOpenMission(mission)}
+                                        >
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                <div className="space-y-1">
+                                                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                                                        <Badge className={`${config.bg} ${config.color} border-current/20 flex items-center gap-1`}>
+                                                            <config.icon size={10} />
+                                                            {status}
+                                                        </Badge>
+                                                        {mission.type === 'special' && (
+                                                            <React.Fragment>
+                                                                <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">Special Assignment</Badge>
+                                                                {!isAssigned && (
+                                                                    <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/20">Not Invited</Badge>
+                                                                )}
+                                                            </React.Fragment>
+                                                        )}
+                                                    </div>
+                                                    <h3 className="text-base md:text-xl font-semibold text-white group-hover:text-primary transition-colors leading-snug">{mission.title}</h3>
+                                                    <div className="flex flex-wrap items-center text-[11px] md:text-sm text-slate-400 gap-2 md:gap-4 pt-1">
+                                                        <span className="flex items-center gap-1"><Icons.Calendar size={12}/> {new Date(mission.openDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - {new Date(mission.closeDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
+                                                        <span className="flex items-center gap-1 text-amber-400/80"><Icons.Star size={12}/> {mission.xp} XP</span>
+                                                    </div>
+                                                </div>
+                                                
+                                                <Button 
+                                                    variant={['Available', 'Revision Required'].includes(status) ? 'primary' : 'secondary'}
+                                                    size="sm"
+                                                    disabled={status === 'Locked'}
+                                                    className="w-full md:w-auto"
+                                                >
+                                                    {status === 'Locked' ? 'Terkunci' : !isAssigned && mission.type === 'special' ? 'Lihat Informasi' : ['Available', 'Revision Required'].includes(status) ? 'Mulai Misi' : 'Rincian Misi'}
+                                                </Button>
+                                            </div>
+                                        </Card>
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MissionPage = ({ mission, onBack, currentTime, onSubmitMission }) => {
+            const status = calculateStatus(mission, currentTime);
+            const config = getStatusConfig(status);
+            const isAssigned = mission.isAssigned;
+            
+            // Countdown Logic
+            const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true });
+            useEffect(() => {
+                if (status === 'Coming Soon') {
+                    const timer = setInterval(() => {
+                        setCountdown(useCountdown(mission.openDate, currentTime));
+                    }, 1000);
+                    setCountdown(useCountdown(mission.openDate, currentTime));
+                    return () => clearInterval(timer);
+                }
+            }, [status, mission.openDate, currentTime]);
+
+            // Form State
+            const [proofText, setProofText] = useState('');
+            const [link, setLink] = useState('');
+            const [confirmed, setConfirmed] = useState(false);
+            const [isSubmitting, setIsSubmitting] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setIsSubmitting(true);
+                setTimeout(() => {
+                    onSubmitMission(mission.id, { proofText, link });
+                    setIsSubmitting(false);
+                }, 1500); 
+            };
+
+            const isFormEnabled = (status === 'Available' || status === 'Revision Required') && isAssigned;
+
+            return (
+                <motion.div 
+                    initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }}
+                    className="max-w-4xl mx-auto pb-24"
+                >
+                    <button onClick={onBack} className="flex items-center text-xs md:text-sm text-slate-400 hover:text-white transition-colors mb-6 group touch-manipulation">
+                        <Icons.ArrowRight className="rotate-180 mr-1.5 group-hover:-translate-x-0.5 transition-transform" size={16} />
+                        Kembali ke Dashboard
+                    </button>
+
+                    {/* Mission Header */}
+                    <div className="glass-card rounded-2xl p-5 md:p-8 mb-6 relative overflow-hidden">
+                        <div className={`absolute top-0 left-0 w-full h-1 ${config.bg.replace('/10', '/50')}`}></div>
+                        <div className="flex flex-col md:flex-row justify-between md:items-end gap-5">
+                            <div>
+                                <Badge className={`mb-3 inline-flex items-center gap-1 ${config.bg} ${config.color} border-current/20 py-0.5 px-2.5`}>
+                                    <config.icon size={12} /> {status}
+                                </Badge>
+                                <h1 className="text-xl md:text-3xl font-display font-bold text-white mb-2 leading-snug">{mission.title}</h1>
+                                <p className="text-slate-300 text-xs md:text-sm leading-relaxed max-w-2xl">{mission.description}</p>
+                            </div>
+                            <div className="bg-surface/50 p-3 md:p-4 rounded-xl border border-white/5 text-center min-w-[100px] md:min-w-[120px] self-start md:self-auto">
+                                <p className="text-slate-400 text-[10px] md:text-xs mb-0.5">Hadiah XP</p>
+                                <p className="text-lg md:text-2xl font-bold text-amber-400 flex items-center justify-center gap-1"><Icons.Star size={16} className="md:size-[20px]"/> {mission.xp}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Main Content Area */}
+                        <div className="lg:col-span-2 space-y-6">
+                            
+                            {/* Special Assignment Access Lock */}
+                            {mission.type === 'special' && !isAssigned && (
+                                <Card className="text-center py-10 border-slate-800 bg-slate-900/40">
+                                    <Icons.Lock size={40} className="mx-auto text-slate-500 mb-3" />
+                                    <h3 className="text-base md:text-lg font-bold text-white mb-1">Akses Terbatas</h3>
+                                    <p className="text-slate-400 max-w-sm mx-auto text-xs md:text-sm mb-4">Tugas khusus ini hanya dapat diselesaikan oleh duta terpilih.</p>
+                                    <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/20 text-[10px] py-1 px-3">Hanya Peserta Terpilih</Badge>
+                                </Card>
+                            )}
+
+                            {/* Countdown Lock Screen */}
+                            {isAssigned && status === 'Coming Soon' && (
+                                <Card className="text-center py-8 md:py-10 border-primary/20 bg-primary/5">
+                                    {mission.type === 'special' ? (
+                                        <div className="mb-4">
+                                            <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-full uppercase tracking-wider">Selamat! Anda Terpilih</span>
+                                            <h3 className="text-lg md:text-xl font-bold text-white mt-3 mb-1">Fase Persiapan</h3>
+                                        </div>
+                                    ) : (
+                                        <h3 className="text-lg md:text-xl font-bold text-white mb-1">Misi Belum Dibuka</h3>
+                                    )}
+                                    <p className="text-xs text-slate-400 mb-6">Misi dan pengiriman berkas akan terbuka dalam:</p>
+                                    
+                                    <div className="flex justify-center gap-2 text-center">
+                                        {[
+                                            { label: 'Hari', value: countdown.days },
+                                            { label: 'Jam', value: countdown.hours },
+                                            { label: 'Menit', value: countdown.minutes },
+                                            { label: 'Detik', value: countdown.seconds }
+                                        ].map((unit, i) => (
+                                            <div key={i} className="bg-surface p-2.5 md:p-3.5 rounded-xl border border-white/10 w-14 md:w-16">
+                                                <div className="text-sm md:text-lg font-display font-bold text-white">{String(unit.value).padStart(2, '0')}</div>
+                                                <div className="text-[8px] md:text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{unit.label}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
+                            )}
+
+                            {/* Completed/Submitted Screen */}
+                            {isAssigned && ['Submitted', 'Waiting for Review', 'Approved', 'Completed'].includes(status) && (
+                                <Card className="text-center py-10 border-emerald-500/20 bg-emerald-500/5">
+                                    <Icons.CheckCircle size={48} className="mx-auto text-emerald-500 mb-4" />
+                                    <h3 className="text-lg md:text-xl font-bold text-white mb-1">Pengiriman Berhasil</h3>
+                                    <p className="text-slate-400 mb-4 max-w-sm mx-auto text-xs md:text-sm">Laporan Anda sedang dalam proses peninjauan oleh tim kurator. Sunting dokumen dinonaktifkan.</p>
+                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs py-1.5 px-3.5">Status: {status}</Badge>
+                                </Card>
+                            )}
+
+                            {/* Closed Mission Screen */}
+                            {isAssigned && status === 'Mission Closed' && (
+                                <Card className="text-center py-10 border-red-500/20 bg-red-500/5">
+                                    <Icons.Lock size={40} className="mx-auto text-red-500 mb-3 opacity-55" />
+                                    <h3 className="text-lg md:text-xl font-bold text-white mb-1">Misi Ditutup</h3>
+                                    <p className="text-slate-400 text-xs md:text-sm">Batas waktu pengerjaan dan pengiriman untuk misi ini telah berakhir.</p>
+                                </Card>
+                            )}
+
+                            {/* Active Submission Form */}
+                            {isAssigned && isFormEnabled && (
+                                <Card className={status === 'Revision Required' ? 'border-red-500/30' : ''}>
+                                    {status === 'Revision Required' && (
+                                        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-5 flex items-start gap-2.5">
+                                            <Icons.AlertCircle className="text-red-400 shrink-0 mt-0.5" size={16} />
+                                            <div>
+                                                <h4 className="font-semibold text-xs md:text-sm text-red-400">Revisi Diperlukan</h4>
+                                                <p className="text-[10px] md:text-xs text-red-300/80 mt-0.5">Harap perbarui pengiriman laporan Anda berdasarkan umpan balik koreksi dari administrator.</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <h3 className="text-sm md:text-lg font-bold text-white mb-4 flex items-center gap-1.5">
+                                        <Icons.Upload className="text-primary" size={18} /> Kirim Laporan & Bukti Misi
+                                    </h3>
+                                    <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Tautan Video / Bukti Pendukung</label>
+                                            <input 
+                                                type="url" required
+                                                className="w-full bg-surface border border-slate-700 rounded-xl px-3 py-2.5 text-xs md:text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-slate-600"
+                                                placeholder="https://tiktok.com/... atau Drive Link"
+                                                value={link} onChange={e => setLink(e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Catatan Tambahan / Deskripsi</label>
+                                            <textarea 
+                                                required rows="3"
+                                                className="w-full bg-surface border border-slate-700 rounded-xl px-3 py-2.5 text-xs md:text-sm text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none placeholder:text-slate-600"
+                                                placeholder="Berikan rangkuman singkat dari pengerjaan Anda..."
+                                                value={proofText} onChange={e => setProofText(e.target.value)}
+                                            ></textarea>
+                                        </div>
+                                        <label className="flex items-start gap-2.5 cursor-pointer group select-none">
+                                            <div className="relative flex items-center mt-0.5">
+                                                <input type="checkbox" required checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="peer sr-only" />
+                                                <div className="w-4.5 h-4.5 border border-slate-600 rounded bg-surface peer-checked:bg-primary peer-checked:border-primary transition-colors"></div>
+                                                <Icons.CheckCircle size={12} className="absolute left-0.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" />
+                                            </div>
+                                            <span className="text-[11px] md:text-xs text-slate-400 group-hover:text-slate-300 transition-colors">Saya mengonfirmasi bahwa seluruh bukti penugasan ini asli dan sesuai arahan program.</span>
+                                        </label>
+                                        <Button type="submit" className="w-full text-xs md:text-sm" disabled={!confirmed || isSubmitting}>
+                                            {isSubmitting ? 'Memproses Laporan...' : 'Kirim Bukti Pekerjaan'}
+                                        </Button>
+                                    </form>
+                                </Card>
+                            )}
+                        </div>
+
+                        {/* Sidebar Details */}
+                        <div className="space-y-4">
+                            <Card>
+                                <h4 className="font-semibold text-xs md:text-sm text-white mb-3 flex items-center gap-1.5"><Icons.Clock size={16}/> Periode Pengiriman</h4>
+                                <div className="space-y-2.5 text-[11px] md:text-xs">
+                                    <div className="flex justify-between border-b border-white/5 pb-1.5">
+                                        <span className="text-slate-400">Dimulai</span>
+                                        <span className="text-white text-right font-medium">{new Date(mission.openDate).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                    </div>
+                                    <div className="flex justify-between pb-0.5">
+                                        <span className="text-slate-400">Selesai</span>
+                                        <span className="text-white text-right font-medium">{new Date(mission.closeDate).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card>
+                                <h4 className="font-semibold text-xs md:text-sm text-white mb-3 flex items-center gap-1.5"><Icons.FileText size={16}/> Ketentuan Pengiriman</h4>
+                                <ul className="space-y-2 text-[11px] md:text-xs text-slate-300">
+                                    <li className="flex gap-1.5 items-start"><div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div> Bukti berupa tautan unggahan berkas atau klip video</li>
+                                    <li className="flex gap-1.5 items-start"><div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div> Pastikan akses tautan diatur ke Publik/Dapat Dilihat</li>
+                                    <li className="flex gap-1.5 items-start"><div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div> Pelanggaran orisinalitas/plagiarisme dapat membatalkan reward</li>
+                                </ul>
+                            </Card>
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        };
+
+        const AdminPanel = ({ missions, currentTime, setMissions, advanceTime, resetTime }) => {
+            const handleStatusChange = (id, newStatus) => {
+                setMissions(prev => prev.map(m => m.id === id ? { ...m, statusOverride: newStatus === 'Auto' ? null : newStatus } : m));
+            };
+
+            const toggleAssignment = (id) => {
+                setMissions(prev => prev.map(m => m.id === id ? { ...m, isAssigned: !m.isAssigned } : m));
+            };
+
+            return (
+                <div className="max-w-6xl mx-auto pb-24 space-y-6">
+                    <div className="flex flex-col md:flex-row justify-between md:items-end gap-5 mb-6">
+                        <div>
+                            <h2 className="text-xl md:text-3xl font-display font-bold text-white mb-1.5">Panel Kontrol Admin</h2>
+                            <p className="text-slate-400 text-xs md:text-sm">Kelola status penugasan, kelayakan peserta, serta jalankan simulasi mesin waktu.</p>
+                        </div>
+                        <div className="glass-card p-3 md:p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center gap-3.5 w-full md:w-auto">
+                            <div className="text-sm">
+                                <p className="text-slate-500 mb-0.5 text-xs">Waktu Ter-Simulasi</p>
+                                <p className="font-mono text-primary font-bold">{currentTime.toLocaleString('id-ID')}</p>
+                            </div>
+                            <div className="flex gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+                                <Button size="sm" variant="secondary" onClick={resetTime}>Reset</Button>
+                                <Button size="sm" onClick={() => advanceTime(24 * 60 * 60 * 1000)}>+1 Hari</Button>
+                                <Button size="sm" onClick={() => advanceTime(7 * 24 * 60 * 60 * 1000)}>+1 Minggu</Button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Card className="overflow-x-auto w-[calc(100vw-2rem)] md:w-full">
+                        <table className="w-full text-left text-xs md:text-sm min-w-[550px]">
+                            <thead>
+                                <tr className="border-b border-white/10 text-slate-400">
+                                    <th className="pb-3 font-semibold">Identitas Misi</th>
+                                    <th className="pb-3 font-semibold">Status Waktu</th>
+                                    <th className="pb-3 font-semibold">Ubah Status</th>
+                                    <th className="pb-3 font-semibold">Penetapan Peserta</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {missions.map(mission => {
+                                    const autoStatus = calculateStatus({ ...mission, statusOverride: null }, currentTime);
+                                    return (
+                                        <tr key={mission.id} className="hover:bg-white/[0.01] transition-colors">
+                                            <td className="py-3 pr-3">
+                                                <div className="font-semibold text-white text-xs md:text-sm">{mission.title}</div>
+                                                <div className="text-[10px] text-slate-500 uppercase tracking-wider">{mission.type} | {mission.xp} XP</div>
+                                            </td>
+                                            <td className="py-3">
+                                                <Badge className="bg-surface text-slate-300 border-white/10">{autoStatus}</Badge>
+                                            </td>
+                                            <td className="py-3">
+                                                <select 
+                                                    className="bg-surface border border-white/10 rounded-lg px-2 py-1.5 text-white text-[11px] md:text-xs focus:outline-none focus:border-primary cursor-pointer"
+                                                    value={mission.statusOverride || 'Auto'}
+                                                    onChange={(e) => handleStatusChange(mission.id, e.target.value)}
+                                                >
+                                                    <option value="Auto">Otomatis (Jadwal)</option>
+                                                    <option value="Submitted">Submitted</option>
+                                                    <option value="Waiting for Review">Waiting for Review</option>
+                                                    <option value="Revision Required">Revision Required</option>
+                                                    <option value="Approved">Approved (Selesai)</option>
+                                                </select>
+                                            </td>
+                                            <td className="py-3">
+                                                {mission.type === 'special' ? (
+                                                    <button 
+                                                        onClick={() => toggleAssignment(mission.id)}
+                                                        className={`px-2.5 py-1.5 rounded-lg text-[10px] md:text-xs font-semibold border transition-all flex items-center gap-1 ${mission.isAssigned ? 'bg-purple-500/25 text-purple-300 border-purple-500/30' : 'bg-surface text-slate-500 border-white/10'}`}
+                                                    >
+                                                        <Icons.Users size={10} />
+                                                        {mission.isAssigned ? 'Terpilih (Selected)' : 'Tidak Terpilih'}
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-[10px] md:text-xs text-slate-500">Semua Peserta</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </Card>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [view, setView] = useState('dashboard'); 
+            const [selectedMissionId, setSelectedMissionId] = useState(null);
+            const [missions, setMissions] = useState(initialMissions);
+            
+            // Set User XP to start from exactly 0 XP
+            const [userXp, setUserXp] = useState(0);
+            
+            // Cinematic Complete Screen State
+            const [completedMissionInfo, setCompletedMissionInfo] = useState(null); 
+
+            // Time Simulation State (Now completely bound to system Date.now() on load)
+            const [timeOffset, setTimeOffset] = useState(0);
+            const [realTime, setRealTime] = useState(Date.now());
+
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    setRealTime(Date.now()); // Tracks actual local time precisely
+                }, 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const currentTime = useMemo(() => new Date(realTime + timeOffset), [realTime, timeOffset]);
+
+            const advanceTime = (ms) => setTimeOffset(prev => prev + ms);
+            const resetTime = () => setTimeOffset(0);
+
+            // Handle Submissions
+            const handleSubmitMission = (id, data) => {
+                setMissions(prev => prev.map(m => m.id === id ? { ...m, statusOverride: 'Waiting for Review' } : m));
+            };
+
+            // Monitor for 'Approved' status to trigger cinematic sequence
+            const animatedMissionsRef = useRef(new Set());
+            useEffect(() => {
+                const newlyApproved = missions.find(m => m.statusOverride === 'Approved' && !animatedMissionsRef.current.has(m.id));
+                if (newlyApproved) {
+                    animatedMissionsRef.current.add(newlyApproved.id);
+                    setCompletedMissionInfo(newlyApproved);
+                    setUserXp(prev => prev + newlyApproved.xp);
+                }
+            }, [missions]);
+
+            const selectedMission = missions.find(m => m.id === selectedMissionId);
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {/* Top Navigation */}
+                    <nav className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/5">
+                        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 text-white font-display font-bold text-base md:text-xl cursor-pointer truncate" onClick={() => setView('dashboard')}>
+                                <div className="w-7.5 h-7.5 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+                                    <Icons.Star size={14} className="text-white" />
+                                </div>
+                                <span className="truncate ml-1">Ambassador Hub</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
+                                <button onClick={() => setView('dashboard')} className={`p-2 rounded-lg transition-colors ${view === 'dashboard' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                    <Icons.Home size={18} />
+                                </button>
+                                <button onClick={() => setView('admin')} className={`p-2 rounded-lg transition-colors ${view === 'admin' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                                    <Icons.Settings size={18} />
+                                </button>
+                                <div className="h-6 w-px bg-white/10 mx-0.5 md:mx-1"></div>
+                                <div className="flex items-center gap-1 md:gap-1.5 bg-white/5 rounded-full px-2.5 py-1 border border-white/15">
+                                    <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+                                        <Icons.Star size={8} className="text-white" />
+                                    </div>
+                                    <span className="text-[10px] md:text-xs font-bold text-white whitespace-nowrap">{userXp} XP</span>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 px-4 md:px-6 pt-6 md:pt-10">
+                        <AnimatePresence mode="wait">
+                            {view === 'dashboard' && (
+                                <motion.div key="dashboard" initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }}>
+                                    <Dashboard 
+                                        missions={missions} 
+                                        currentTime={currentTime} 
+                                        userXp={userXp}
+                                        onOpenMission={(mission) => {
+                                            setSelectedMissionId(mission.id);
+                                            setView('mission');
+                                        }} 
+                                    />
+                                </motion.div>
+                            )}
+                            
+                            {view === 'mission' && selectedMission && (
+                                <motion.div key="mission" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -15 }}>
+                                    <MissionPage 
+                                        mission={selectedMission} 
+                                        currentTime={currentTime}
+                                        onBack={() => setView('dashboard')}
+                                        onSubmitMission={handleSubmitMission}
+                                    />
+                                </motion.div>
+                            )}
+
+                            {view === 'admin' && (
+                                <motion.div key="admin" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}>
+                                    <AdminPanel 
+                                        missions={missions} 
+                                        setMissions={setMissions} 
+                                        currentTime={currentTime}
+                                        advanceTime={advanceTime}
+                                        resetTime={resetTime}
+                                    />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </main>
+
+                    {/* Cinematic Overlay */}
+                    <AnimatePresence>
+                        {completedMissionInfo && (
+                            <MissionCompleteScreen 
+                                mission={completedMissionInfo}
+                                xpEarned={completedMissionInfo.xp}
+                                onContinue={() => {
+                                    setCompletedMissionInfo(null);
+                                    if(view === 'mission') setView('dashboard');
+                                }}
+                            />
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
